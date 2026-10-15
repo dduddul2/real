@@ -1,0 +1,419 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desert Strike FPS</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#bd9368;color:white}
+#game{position:fixed;inset:0}
+canvas{display:block}
+.panel{background:#101e30eF;border:1px solid #65a9ce;border-radius:7px;padding:10px;box-shadow:0 4px 18px #0005}
+h3{font-size:15px;margin:0 0 8px;border-bottom:1px solid #ffffff35;padding-bottom:7px}
+#agents{position:absolute;top:10px;left:10px;width:370px}
+.agentrow{display:flex;gap:5px}
+.agent{flex:1;background:#152c40;color:white;border:1px solid #58a4d0;border-radius:4px;padding:7px 2px;cursor:pointer}
+.agent.selected{border:2px solid #ffdc76}
+.face{font-size:30px;height:45px}
+.agent b,.agent small{display:block}
+.agent small{font-size:10px;color:#bcd5e4}
+#score{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:20px;background:#152a42e8;padding:8px 28px;text-align:center}
+#score strong{font-size:25px}
+#timer{font-size:22px;font-weight:bold}
+#controls{position:absolute;right:10px;top:10px;width:220px;font-size:12px}
+.control{margin:8px 0}
+.key{display:inline-block;background:#243b50;border:1px solid #c5d6df;border-radius:4px;padding:4px 6px;margin-right:3px}
+#shop{position:absolute;bottom:110px;left:10px;width:350px}
+#tabs{display:flex;gap:4px;margin-bottom:6px}
+#tabs button,#buy{background:#16354a;color:white;border:1px solid #6798b4;padding:7px;cursor:pointer;border-radius:4px}
+#items{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.item{background:#162b3c;color:white;border:1px solid #426981;border-radius:4px;text-align:left;padding:7px;cursor:pointer;min-height:55px}
+.item.selected{border:2px solid #ffdb72}
+.item span{display:block;font-size:22px;color:#c8d7e1}
+.item small{display:block;color:#d4e3ec}
+#money{display:flex;justify-content:space-between;align-items:center;color:#ffdb67;font-size:20px;font-weight:bold;margin-top:8px}
+#map{position:absolute;top:180px;left:20px;width:150px;height:150px;border:2px solid #9eb9c7;border-radius:50%;background:#172d3fe8;padding:20px}
+.mapwall{position:absolute;background:#6b8392;border:1px solid #b3c5ce}
+.dot{position:absolute;width:8px;height:8px;border-radius:50%;background:#18d9ef}
+.enemyDot{background:#ff425e}
+#killfeed{position:absolute;right:12px;top:250px;width:190px;font-size:12px}
+.kill{background:#a52c43dd;margin:4px 0;padding:6px}
+#weapons{position:absolute;right:10px;bottom:105px;width:155px}
+.weapon{background:#172c40df;padding:9px;border-bottom:1px solid #ffffff35;font-size:12px}
+.weapon.active{border:1px solid #ffda6a}
+#stats{position:absolute;bottom:12px;left:12px;display:flex;gap:8px;align-items:end}
+#playerFace{width:70px;height:70px;background:#183349;border:1px solid #69b0d3;display:grid;place-items:center;font-size:42px}
+#health{background:#102337e8;padding:10px;width:260px}
+.stat{margin:6px 0;font-weight:bold}
+.bar{display:inline-block;background:#526474;width:145px;height:10px;margin-left:5px}
+.fill{height:100%;background:#38dbb2;width:100%}
+#ammo{position:absolute;right:35px;bottom:15px;font-size:34px;font-weight:bold;text-shadow:0 2px 5px #000}
+#ammo small{font-size:15px}
+#crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:18px;height:18px;pointer-events:none}
+#crosshair:before,#crosshair:after{content:"";position:absolute;background:white;box-shadow:0 0 3px black}
+#crosshair:before{width:2px;height:18px;left:8px}
+#crosshair:after{height:2px;width:18px;top:8px}
+#start{position:absolute;inset:0;background:#0c1c2b88;display:flex;justify-content:center;align-items:center}
+#startBox{text-align:center;padding:28px 40px}
+#startBox h1{font-size:32px;letter-spacing:2px}
+#startButton{padding:12px 28px;background:#23bdd2;color:#082336;border:0;border-radius:4px;font-weight:bold;font-size:17px;cursor:pointer}
+#toast{position:absolute;bottom:140px;left:50%;transform:translateX(-50%);background:#10263beF;padding:12px 20px;border:1px solid #7bb5d0;display:none}
+.hidden{display:none!important}
+@media(max-width:800px){#agents{transform:scale(.72);transform-origin:top left}#controls{transform:scale(.7);transform-origin:top right}#map,#killfeed{display:none}#shop{transform:scale(.72);transform-origin:bottom left;bottom:95px}#stats{transform:scale(.75);transform-origin:bottom left}#weapons{transform:scale(.75);transform-origin:bottom right}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+
+<div id="agents" class="panel">
+<h3>캐릭터 선택</h3>
+<div class="agentrow">
+<button class="agent selected" data-name="제트"><div class="face">🧑🏻‍🎤</div><b>제트</b><small>기동성</small></button>
+<button class="agent" data-name="레이나"><div class="face">🧝🏽‍♀️</div><b>레이나</b><small>생존력</small></button>
+<button class="agent" data-name="오멘"><div class="face">👤</div><b>오멘</b><small>연막</small></button>
+<button class="agent" data-name="게코"><div class="face">🧑🏼‍🦱</div><b>게코</b><small>소환</small></button>
+</div>
+</div>
+
+<div id="score"><strong>3</strong><div><div id="timer">1:24</div><small>라운드 5/12</small></div><strong>1</strong></div>
+
+<div id="map">
+<div class="mapwall" style="left:25px;top:30px;width:65px;height:12px"></div>
+<div class="mapwall" style="left:75px;top:35px;width:12px;height:70px"></div>
+<div class="mapwall" style="left:35px;top:90px;width:65px;height:12px"></div>
+<div class="dot" style="left:45px;top:65px"></div>
+<div class="dot" style="left:65px;top:100px"></div>
+<div class="dot enemyDot" style="left:100px;top:60px"></div>
+<div class="dot enemyDot" style="left:112px;top:80px"></div>
+</div>
+
+<div id="shop" class="panel">
+<h3>무기 상점</h3>
+<div id="tabs">
+<button data-cat="주총">주총</button><button data-cat="권총">권총</button><button data-cat="칼">칼</button><button data-cat="수류탄">수류탄</button>
+</div>
+<div id="items"></div>
+<div id="money">＄ <span id="cash">3,200</span><button id="buy">구매하기</button></div>
+</div>
+
+<div id="controls" class="panel">
+<h3>조작 방법</h3>
+<div class="control"><span class="key">W A S D</span> 이동</div>
+<div class="control"><span class="key">Space</span> 점프</div>
+<div class="control"><span class="key">Shift</span> 천천히 이동</div>
+<div class="control"><span class="key">마우스</span> 조준</div>
+<div class="control"><span class="key">좌클릭</span> 발사</div>
+<div class="control"><span class="key">R</span> 재장전</div>
+<div class="control"><span class="key">1 / 2 / 3 / 4</span> 무기 변경</div>
+<div class="control"><span class="key">B</span> 상점 열기</div>
+<div class="control"><span class="key">Esc</span> 마우스 해제</div>
+</div>
+
+<div id="killfeed"><div class="kill">제트　▰▰　적</div><div class="kill">레이나　▰▰　적</div></div>
+<div id="weapons">
+<div class="weapon active">▰━ Vandal　<b>1</b></div>
+<div class="weapon">▰ Glock-18　<b>2</b></div>
+<div class="weapon">╱ 칼　<b>3</b></div>
+<div class="weapon">◉ 수류탄　<b>4</b></div>
+</div>
+
+<div id="stats"><div id="playerFace">🧑🏻‍🎤</div><div id="health">
+<div class="stat">✚ <span id="hp">100</span><span class="bar"><div id="hpfill" class="fill"></div></span></div>
+<div class="stat">♢ <span id="armor">50</span><span class="bar"><div class="fill" style="width:50%;background:#b9cad6"></div></span></div>
+</div></div>
+<div id="ammo">25 <small>| 75</small></div>
+<div id="crosshair"></div><div id="toast"></div>
+
+<div id="start"><div id="startBox" class="panel">
+<h1>DESERT STRIKE</h1>
+<p>사막 전장에서 전투를 시작하세요.</p>
+<p>WASD 이동 · 마우스 조준 · 클릭 사격</p>
+<button id="startButton">전투 시작</button>
+</div></div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x8bc7f3);
+scene.fog=new THREE.Fog(0xc9a17b,35,105);
+
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,220);
+camera.position.set(0,1.7,12);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.1;
+document.getElementById('game').appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xc7e8ff,0x98643f,2));
+const sun=new THREE.DirectionalLight(0xffdfb2,3);
+sun.position.set(-25,42,22);
+sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-50;
+sun.shadow.camera.right=50;
+sun.shadow.camera.top=50;
+sun.shadow.camera.bottom=-50;
+scene.add(sun);
+
+const material=c=>new THREE.MeshStandardMaterial({color:c,roughness:.9});
+const sand=material(0xc99b69),light=material(0xd4a779),stone=material(0xb9875e),dark=material(0x956748),wood=material(0x755039),woodLight=material(0x986b46),green=material(0x50784b);
+
+function box(x,y,z,w,h,d,m,shadow=true){
+ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+ o.position.set(x,y,z);o.castShadow=shadow;o.receiveShadow=true;scene.add(o);return o;
+}
+function cylinder(x,y,z,r1,r2,h,m){
+ const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,8),m);
+ o.position.set(x,y,z);o.castShadow=true;scene.add(o);return o;
+}
+
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(180,180),sand);
+floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+
+// 불규칙한 모래색 바닥 무늬
+for(let i=0;i<32;i++){
+ const p=new THREE.Mesh(new THREE.CircleGeometry(2+Math.random()*3,16),i%2?light:dark);
+ p.rotation.x=-Math.PI/2;
+ p.position.set((Math.random()-.5)*75,.01,(Math.random()-.5)*70);
+ p.scale.y=.5+Math.random();scene.add(p);
+}
+
+// 멀리 보이는 사막 도시
+for(let i=0;i<22;i++){
+ const h=9+Math.random()*17;
+ box(-65+i*6,h/2,-59-Math.random()*10,5,h,7,i%2?stone:dark,false);
+}
+function building(x,z,w,d,h,m){
+ box(x,h/2,z,w,h,d,m);
+ box(x,h+.12,z,w+.35,.25,d+.35,light);
+ box(x,h+.45,z,w+.1,.65,d+.1,stone);
+}
+building(-16,-7,10,13,14,stone);
+building(-18,8,11,10,11,light);
+building(-24,1,7,12,17,dark);
+building(16,-8,11,13,15,light);
+building(20,8,10,10,12,stone);
+building(26,0,7,13,18,dark);
+building(-10,-28,12,8,13,light);
+building(12,-31,15,8,16,stone);
+building(-33,-17,9,14,14,light);
+building(34,-18,9,13,16,stone);
+building(-34,12,9,12,12,stone);
+building(35,12,10,12,14,light);
+
+// 중앙 아치형 통로
+box(-4,3.1,-23,1.5,6.2,1.7,light);
+box(4,3.1,-23,1.5,6.2,1.7,light);
+box(0,6.4,-23,9,1.2,1.8,light);
+for(let i=0;i<7;i++){
+ const a=Math.PI*i/6;
+ box(Math.cos(a)*3.5,5.7+Math.sin(a)*1.7,-23,1.2,1.1,1.9,stone);
+}
+box(0,2.3,-22,5.4,4.6,.1,material(0x5c3b2b),false);
+
+// 천막
+for(const x of [-8,8]){
+ box(x,5.2,-14,7,.2,4,material(x<0?0x9d3d31:0x74322e));
+ for(let j=0;j<5;j++)box(x-3.1+j*1.55,4.8,-14,.15,.5,4,material(j%2?0xd1a36e:0x913e32),false);
+}
+
+// 나무 상자
+function crate(x,z,s=1){
+ box(x,.65*s,z,1.5*s,1.3*s,1.5*s,wood);
+ for(let i=0;i<4;i++){
+  box(x-.52*s+i*.35*s,.65*s,z+.77*s,.08*s,1.22*s,.04*s,woodLight,false);
+  box(x,.12*s+i*.33*s,z+.79*s,1.4*s,.07*s,.04*s,woodLight,false);
+ }
+}
+crate(-7,4,1.3);crate(-5,6);crate(8,1,1.15);crate(10,3,.9);
+crate(-11,-2);crate(13,-2,1.2);crate(0,-7,.8);
+
+// 통
+for(const [x,z] of [[-12,7],[12,7],[5,-3],[-4,-4]]){
+ cylinder(x,.65,z,.48,.48,1.3,material(0x686b5c));
+ cylinder(x,1.32,z,.49,.49,.08,material(0x343e42));
+}
+
+// 야자수
+function palm(x,z,h=9){
+ cylinder(x,h/2,z,.22,.36,h,material(0x765137));
+ for(let i=0;i<8;i++){
+  const a=i*Math.PI/4,len=2.8+Math.random();
+  const frond=new THREE.Mesh(new THREE.ConeGeometry(.48,len,5),green);
+  frond.position.set(x+Math.cos(a)*len*.5,h-.1+Math.sin(a)*.5,z+Math.sin(a)*len*.5);
+  frond.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(Math.cos(a),-.35,Math.sin(a)).normalize());
+  frond.scale.z=.45;frond.castShadow=true;scene.add(frond);
+ }
+}
+palm(-25,-8,10);palm(25,-6,11);palm(-8,-36,9);palm(18,-35,10);palm(31,4,9);
+
+// 1인칭 소총
+const gun=new THREE.Group();camera.add(gun);gun.position.set(.43,-.38,-.8);
+function gunBox(x,y,z,w,h,d,c){
+ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(c));o.position.set(x,y,z);gun.add(o);
+}
+gunBox(0,0,0,.25,.22,.8,0x29333a);
+gunBox(0,.14,-.02,.16,.07,.58,0x59646b);
+gunBox(0,-.03,.48,.22,.18,.34,0x3b4143);
+gunBox(0,-.22,.15,.13,.28,.15,0x1c2429);
+gunBox(-.03,-.22,.39,.18,.15,.28,0xb97858);
+const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.045,.05,.42,10),material(0x161d22));
+barrel.rotation.x=Math.PI/2;barrel.position.set(0,.03,-.55);gun.add(barrel);
+const muzzle=new THREE.PointLight(0xffa438,0,5);muzzle.position.set(0,.02,-.82);gun.add(muzzle);
+
+// 적 캐릭터
+const enemies=[];
+function makeEnemy(x,z){
+ const g=new THREE.Group();g.position.set(x,0,z);
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.38,.85,4,8),material(0x482e2a));
+ body.position.y=1.1;body.castShadow=true;g.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.28,12,10),material(0xb77c58));
+ head.position.y=1.95;g.add(head);
+ const vest=new THREE.Mesh(new THREE.BoxGeometry(.68,.62,.32),material(0x8a3f2c));
+ vest.position.y=1.2;g.add(vest);
+ const mark=new THREE.Mesh(new THREE.BoxGeometry(.85,.08,.08),material(0xff4b43));
+ mark.position.y=2.45;g.add(mark);
+ g.userData={hp:100,alive:true};scene.add(g);enemies.push(g);
+}
+makeEnemy(-2,-14);makeEnemy(6,-18);makeEnemy(11,-11);
+makeEnemy(-10,-21);makeEnemy(2,-30);makeEnemy(20,-21);
+
+let locked=false,keys={},vy=0,onGround=true,ammo=25,reserve=75,cash=3200;
+let weapon='Vandal',category='주총',chosen=null,agentName='제트',cool=0,started=false;
+const ray=new THREE.Raycaster();
+
+const stock={
+ '주총':[['AK-47',2700,'▰━'],['M4A1',3100,'▰━'],['AWP',4750,'━━'],['Vandal',2900,'▰━'],['Phantom',2900,'▰━'],['Guardian',2250,'━']],
+ '권총':[['Glock-18',200,'▰'],['USP-S',500,'▰'],['Desert Eagle',700,'▰']],
+ '칼':[['기본 칼',0,'╱'],['카람빗',1200,'╱'],['전투 나이프',800,'╱']],
+ '수류탄':[['수류탄',300,'◉'],['연막탄',300,'◉'],['섬광탄',200,'◉']]
+};
+function renderItems(){
+ const root=document.getElementById('items');root.innerHTML='';
+ stock[category].forEach(it=>{
+  const b=document.createElement('button');b.className='item';
+  b.innerHTML=`<span>${it[2]}</span><b>${it[0]}</b><small>$${it[1].toLocaleString()}</small>`;
+  b.onclick=()=>{chosen=it;document.querySelectorAll('.item').forEach(q=>q.classList.remove('selected'));b.classList.add('selected')};
+  root.appendChild(b);
+ });
+}
+renderItems();
+function toast(t){
+ const e=document.getElementById('toast');e.textContent=t;e.style.display='block';
+ clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',1700);
+}
+function updateAmmo(){document.getElementById('ammo').innerHTML=`${ammo} <small>| ${reserve}</small>`}
+
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
+ category=b.dataset.cat;chosen=null;
+ document.querySelectorAll('#tabs button').forEach(t=>t.style.background=t===b?'#218cac':'#16354a');
+ renderItems();
+});
+document.getElementById('buy').onclick=()=>{
+ if(!chosen)return toast('구매할 아이템을 선택하세요.');
+ if(cash<chosen[1])return toast('크레딧이 부족합니다.');
+ cash-=chosen[1];document.getElementById('cash').textContent=cash.toLocaleString();
+ if(category==='주총'||category==='권총'){
+  weapon=chosen[0];ammo=weapon==='AWP'?5:25;reserve=weapon==='AWP'?15:75;updateAmmo();
+ }
+ toast(chosen[0]+' 구매 완료!');
+};
+document.querySelectorAll('.agent').forEach(b=>b.onclick=()=>{
+ agentName=b.dataset.name;
+ document.querySelectorAll('.agent').forEach(x=>x.classList.toggle('selected',x===b));
+ document.getElementById('playerFace').textContent={'제트':'🧑🏻‍🎤','레이나':'🧝🏽‍♀️','오멘':'👤','게코':'🧑🏼‍🦱'}[agentName];
+ toast(agentName+' 선택 완료');
+});
+function switchWeapon(n){
+ weapon=({1:'Vandal',2:'Glock-18',3:'칼',4:'수류탄'})[n];
+ gun.visible=n<=2;updateAmmo();
+ document.querySelectorAll('.weapon').forEach((w,i)=>w.classList.toggle('active',i===n-1));
+ toast(weapon);
+}
+function reload(){
+ if(reserve<=0||ammo>=25)return toast('재장전할 필요가 없습니다.');
+ const n=Math.min(25-ammo,reserve);ammo+=n;reserve-=n;updateAmmo();toast('재장전 완료');
+}
+function shoot(){
+ if(!locked||!started||cool>0)return;
+ cool=.17;
+ if(weapon==='칼'||weapon==='수류탄')return toast(weapon+' 선택됨');
+ if(ammo<=0)return toast('탄약이 없습니다. R로 재장전');
+ ammo--;updateAmmo();muzzle.intensity=8;
+ setTimeout(()=>muzzle.intensity=0,60);
+ gun.position.z=-.7;setTimeout(()=>gun.position.z=-.8,80);
+ ray.setFromCamera(new THREE.Vector2(0,0),camera);
+ const hits=ray.intersectObjects(enemies.filter(e=>e.userData.alive).flatMap(e=>e.children),false);
+ if(hits.length){
+  const e=enemies.find(e=>e.children.includes(hits[0].object));
+  if(e){
+   e.userData.hp-=weapon==='AWP'?100:34;
+   if(e.userData.hp<=0){
+    e.userData.alive=false;e.visible=false;cash+=300;
+    document.getElementById('cash').textContent=cash.toLocaleString();
+    document.getElementById('killfeed').innerHTML=`<div class="kill">${agentName}　▰▰　적 +300</div>`+document.getElementById('killfeed').innerHTML;
+    toast('적을 처치했습니다! +300');
+   }
+  }
+ }
+}
+document.getElementById('startButton').onclick=()=>{
+ started=true;document.getElementById('start').style.display='none';renderer.domElement.requestPointerLock();
+};
+document.addEventListener('pointerlockchange',()=>{
+ locked=document.pointerLockElement===renderer.domElement;
+ if(started&&!locked)toast('마우스 잠금 해제');
+});
+document.addEventListener('mousemove',e=>{
+ if(!locked)return;
+ camera.rotation.order='YXZ';
+ camera.rotation.y-=e.movementX*.0022;
+ camera.rotation.x-=e.movementY*.0022;
+ camera.rotation.x=Math.max(-1.35,Math.min(1.35,camera.rotation.x));
+});
+document.addEventListener('keydown',e=>{
+ keys[e.code]=true;
+ if(e.code==='Space'&&onGround){vy=6.7;onGround=false}
+ if(e.code==='KeyR')reload();
+ if(/^Digit[1-4]$/.test(e.code))switchWeapon(Number(e.code.slice(5)));
+ if(e.code==='KeyB')document.getElementById('shop').classList.toggle('hidden');
+});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+document.addEventListener('mousedown',e=>{if(e.button===0)shoot()});
+
+let last=performance.now();
+function loop(t){
+ requestAnimationFrame(loop);
+ const dt=Math.min((t-last)/1000,.04);last=t;cool=Math.max(0,cool-dt);
+ if(locked&&started){
+  const f=new THREE.Vector3();camera.getWorldDirection(f);f.y=0;f.normalize();
+  const r=new THREE.Vector3().crossVectors(f,new THREE.Vector3(0,1,0)).negate();
+  const move=new THREE.Vector3();
+  if(keys.KeyW)move.add(f);if(keys.KeyS)move.sub(f);
+  if(keys.KeyD)move.add(r);if(keys.KeyA)move.sub(r);
+  if(move.lengthSq()){move.normalize();camera.position.addScaledVector(move,(keys.ShiftLeft?2.4:5.6)*dt)}
+  vy-=16*dt;camera.position.y+=vy*dt;
+  if(camera.position.y<1.7){camera.position.y=1.7;vy=0;onGround=true}
+  camera.position.x=THREE.MathUtils.clamp(camera.position.x,-39,39);
+  camera.position.z=THREE.MathUtils.clamp(camera.position.z,-43,22);
+ }
+ enemies.forEach(e=>{if(e.userData.alive)e.lookAt(camera.position.x,0,camera.position.z)});
+ renderer.render(scene,camera);
+}
+loop(performance.now());
+addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
+});
+updateAmmo();
+</script>
+</body>
+</html>
